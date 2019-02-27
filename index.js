@@ -1,27 +1,22 @@
 'use strict'
 
 module.exports = function toJSONLoader (code) {
-  var result = this.exec(code, this.resourcePath)
+  const result = this.exec(code, this.resourcePath)
 
   if (typeof result !== 'function') {
     return toJSON(result)
   }
 
-  var callback = this.async()
-  if (!callback) {
-    if (result.sync) {
-      if (typeof result.sync === 'function') {
-        return toJSON(result.async())
-      } else {
-        return toJSON(result.async)
-      }
-    }
-    this.emitError('Resource ' + this.resourcePath + ' needs async but it is not supported')
+  const returned = result();
+
+  if (!returned.then) {
+    return toJSON(returned);
   }
 
-  result(function asyncCallback (result) {
-    callback(null, toJSON(result))
-  })
+  const callback = this.async()
+  returned
+    .then(asyncResult => callback(null, toJSON(asyncResult)))
+    .catch(error => callback(error));
 }
 
 module.exports.pitch = function pitch () {
